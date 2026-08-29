@@ -1,0 +1,847 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Retype — turn any document into any other</title>
+<meta name="description" content="A private, client-side document converter. PDF, Word, Markdown, HTML and plain text — converted entirely in your browser." />
+<meta name="google-site-verification" content="google08a8d2f33b106eb8" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#ffffff;
+    --surface:#f8f6fd;
+    --surface-dim:#efe9fb;
+    --line:#e3dcf6;
+    --paper:#ffffff;
+    --paper-dim:#f4f0fc;
+    --purple:#7c3aed;
+    --purple-bright:#8f5cf7;
+    --purple-deep:#3b0f8c;
+    --text-hi:#2e1065;
+    --text-mid:#6b6280;
+    --text-ink:#2e1065;
+    --danger:#c0392b;
+    --radius:14px;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(124,58,237,0.07), transparent 45%),
+      radial-gradient(circle at 85% 20%, rgba(124,58,237,0.05), transparent 40%),
+      var(--bg);
+    color:var(--text-mid);
+    font-family:'Inter', system-ui, sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  a{color:inherit;}
+  ::selection{background:var(--purple); color:#ffffff;}
+
+  :focus-visible{
+    outline:2px solid var(--purple);
+    outline-offset:3px;
+    border-radius:4px;
+  }
+
+  h1,h2,h3{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    margin:0;
+    color:var(--text-hi);
+  }
+
+  .mono{
+    font-family:'IBM Plex Mono', monospace;
+    letter-spacing:0.06em;
+  }
+
+  .wrap{
+    max-width:980px;
+    margin:0 auto;
+    padding:0 24px;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    padding:28px 0 8px;
+  }
+  .nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .brand-mark{
+    width:36px; height:36px;
+    border-radius:8px;
+    border:2px solid var(--purple);
+    display:flex; align-items:center; justify-content:center;
+    transform:rotate(-4deg);
+    flex-shrink:0;
+  }
+  .brand-mark svg{width:18px; height:18px; display:block;}
+  .brand-name{
+    font-family:'Fraunces', serif;
+    font-size:1.25rem;
+    font-weight:600;
+    letter-spacing:0.01em;
+  }
+  .brand-tag{
+    display:none;
+  }
+  @media(min-width:600px){
+    .brand-tag{
+      display:block;
+      font-size:0.7rem;
+      color:var(--text-mid);
+      padding-left:12px;
+      margin-left:12px;
+      border-left:1px solid var(--line);
+    }
+  }
+  .nav-note{
+    font-size:0.78rem;
+    color:var(--text-mid);
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    padding:64px 0 40px;
+    text-align:center;
+  }
+  .eyebrow{
+    display:inline-block;
+    font-size:0.72rem;
+    color:var(--purple);
+    font-weight:600;
+    margin-bottom:18px;
+  }
+  .hero h1{
+    font-size:clamp(2.1rem, 5vw, 3.4rem);
+    line-height:1.08;
+  }
+  .hero h1 em{
+    font-style:italic;
+    color:var(--purple);
+  }
+  .hero p.sub{
+    max-width:520px;
+    margin:20px auto 0;
+    color:var(--text-mid);
+    font-size:1rem;
+  }
+
+  /* ---------- converter ---------- */
+  .converter{
+    padding:20px 0 80px;
+  }
+
+  .paper-card{
+    background:var(--paper);
+    color:var(--text-ink);
+    border-radius:4px;
+    border:1px solid var(--line);
+    box-shadow:0 30px 60px -30px rgba(124,58,237,0.35), 0 2px 0 rgba(124,58,237,0.05);
+    transform:rotate(-0.6deg);
+    max-width:640px;
+    margin:0 auto;
+    position:relative;
+  }
+  .paper-card::before{
+    content:"";
+    position:absolute;
+    inset:10px;
+    border:1px dashed rgba(46,16,101,0.18);
+    border-radius:2px;
+    pointer-events:none;
+  }
+
+  .target-bar{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    flex-wrap:wrap;
+    padding:18px 28px 0;
+  }
+  .target-label{
+    font-size:0.72rem;
+    font-weight:600;
+    letter-spacing:0.08em;
+    color:var(--text-mid);
+  }
+
+  #dropzone{
+    padding:52px 28px;
+    text-align:center;
+    cursor:pointer;
+  }
+  #dropzone.drag{
+    background:var(--paper-dim);
+  }
+  .drop-icon{
+    width:46px; height:46px;
+    margin:0 auto 18px;
+    color:var(--purple);
+  }
+  .drop-title{
+    font-family:'Fraunces', serif;
+    font-size:1.25rem;
+    font-weight:500;
+    color:var(--text-hi);
+  }
+  .drop-hint{
+    margin-top:8px;
+    font-size:0.85rem;
+    color:var(--text-mid);
+  }
+  #fileInput{ display:none; }
+
+  .pipeline{
+    padding:30px 28px 34px;
+  }
+  .pipeline-top{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:22px;
+  }
+  .filename{
+    font-size:0.82rem;
+    color:var(--text-mid);
+    text-align:center;
+    margin-top:-8px;
+    margin-bottom:20px;
+    word-break:break-all;
+  }
+  .stamp{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.78rem;
+    font-weight:600;
+    letter-spacing:0.08em;
+    padding:9px 14px;
+    border:2px solid var(--purple);
+    border-radius:8px;
+    background:var(--purple);
+    color:#ffffff;
+    transform:rotate(-2deg);
+    display:inline-block;
+  }
+  .arrow-glyph{
+    font-size:1.3rem;
+    color:var(--purple);
+  }
+
+  .fmt-select{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.78rem;
+    letter-spacing:0.06em;
+    font-weight:600;
+    text-transform:uppercase;
+    padding:9px 34px 9px 14px;
+    border-radius:8px;
+    border:2px solid var(--purple);
+    background:var(--paper) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path d="M0 0l5 6 5-6z" fill="%237c3aed"/></svg>') no-repeat right 12px center;
+    color:var(--text-ink);
+    appearance:none;
+    cursor:pointer;
+  }
+
+  .actions{
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+
+  button#convertBtn{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:0.92rem;
+    padding:12px 26px;
+    border-radius:8px;
+    border:none;
+    background:var(--purple);
+    color:#ffffff;
+    cursor:pointer;
+    transition:background 0.15s ease, transform 0.15s ease;
+  }
+  button#convertBtn:hover{ background:var(--purple-bright); }
+  button#convertBtn:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+
+  button#resetBtn{
+    font-family:'Inter', sans-serif;
+    font-size:0.85rem;
+    padding:12px 18px;
+    border-radius:8px;
+    border:2px solid var(--purple);
+    background:transparent;
+    color:var(--text-ink);
+    cursor:pointer;
+  }
+
+  #status{
+    text-align:center;
+    margin-top:18px;
+    font-size:0.85rem;
+    min-height:1.2em;
+    color:#6b6d7a;
+  }
+  #status.error{ color:var(--danger); }
+  #status.ok{ color:var(--purple-deep); }
+
+  .download-wrap{
+    text-align:center;
+    margin-top:16px;
+  }
+  a#downloadLink{
+    display:inline-block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.8rem;
+    font-weight:600;
+    letter-spacing:0.04em;
+    padding:11px 22px;
+    border-radius:8px;
+    background:var(--purple-deep);
+    color:#ffffff !important;
+    text-decoration:none;
+  }
+
+  .privacy-note{
+    text-align:center;
+    margin-top:22px;
+    font-size:0.76rem;
+    color:var(--text-mid);
+  }
+  .privacy-note svg{
+    width:12px; height:12px;
+    vertical-align:-1px;
+    margin-right:5px;
+  }
+
+  /* ---------- formats ---------- */
+  .formats{
+    padding:20px 0 90px;
+  }
+  .formats h2{
+    text-align:center;
+    font-size:1.6rem;
+    margin-bottom:8px;
+  }
+  .formats .sub{
+    text-align:center;
+    color:var(--text-mid);
+    font-size:0.9rem;
+    max-width:460px;
+    margin:0 auto 40px;
+  }
+  .stamp-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));
+    gap:16px;
+  }
+  .format-cell{
+    border:1px solid var(--line);
+    background:var(--surface);
+    border-radius:10px;
+    padding:20px;
+  }
+  .format-cell .fstamp{
+    display:inline-block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.74rem;
+    font-weight:600;
+    letter-spacing:0.08em;
+    padding:6px 11px;
+    border:2px solid var(--purple);
+    color:var(--text-hi);
+    border-radius:6px;
+    transform:rotate(-2deg);
+    margin-bottom:12px;
+  }
+  .format-cell p{
+    margin:0;
+    font-size:0.83rem;
+    color:var(--text-mid);
+  }
+
+  footer{
+    border-top:1px solid var(--line);
+    padding:26px 0 40px;
+    text-align:center;
+    font-size:0.78rem;
+    color:var(--text-mid);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap nav">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" stroke="#7c3aed" stroke-width="1.6"/><path d="M14 3v5h5" stroke="#7c3aed" stroke-width="1.6"/></svg>
+      </div>
+      <span class="brand-name">Retype</span>
+      <span class="brand-tag mono">DOCUMENT CONVERTER</span>
+    </div>
+    <div class="nav-note mono">RUNS IN‑BROWSER</div>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <span class="eyebrow mono">PDF · DOCX · MARKDOWN · HTML · TXT</span>
+    <h1>Retype any document<br/>into <em>any</em> other.</h1>
+    <p class="sub">Drop a file, choose a format, get it back — converted right here on your device. Nothing you upload ever touches a server.</p>
+  </section>
+
+  <section class="converter wrap">
+    <div class="paper-card">
+
+      <div class="target-bar">
+        <span class="target-label mono">CONVERT TO</span>
+        <select id="targetSelect" class="fmt-select" aria-label="Choose output format">
+          <option value="pdf">.PDF</option>
+          <option value="docx">.DOCX</option>
+          <option value="md">.MD</option>
+          <option value="html">.HTML</option>
+          <option value="txt">.TXT</option>
+        </select>
+      </div>
+
+      <div id="dropzone">
+        <svg class="drop-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3v12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M7 10l5 5 5-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 18v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <div class="drop-title">Drop a file, or click to browse</div>
+        <div class="drop-hint" id="dropHint">.pdf · .docx · .md · .html · .txt</div>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.md,.markdown,.html,.htm,.txt" />
+      </div>
+
+      <div class="pipeline" id="pipeline" hidden>
+        <div class="filename mono" id="filenameLabel"></div>
+        <div class="pipeline-top">
+          <span class="stamp" id="inputStamp">.PDF</span>
+          <span class="arrow-glyph">→</span>
+          <select id="toSelect" class="fmt-select" aria-label="Convert to format"></select>
+        </div>
+        <div class="actions">
+          <button id="convertBtn">Convert file</button>
+          <button id="resetBtn" type="button">Start over</button>
+        </div>
+        <div id="status" role="status"></div>
+        <div class="download-wrap">
+          <a id="downloadLink" hidden download>Download result</a>
+        </div>
+      </div>
+
+    </div>
+
+    <p class="privacy-note">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline"><rect x="5" y="10" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.6"/></svg>
+      All conversion happens locally in your browser. Files are never uploaded anywhere.
+    </p>
+  </section>
+
+  <section class="formats wrap">
+    <h2>What Retype speaks</h2>
+    <p class="sub">Each format converts into whichever of the others makes sense — text-based formats keep their structure where possible.</p>
+    <div class="stamp-grid">
+      <div class="format-cell">
+        <span class="fstamp">.PDF</span>
+        <p>Extracts the text layer of a PDF and retypes it as .txt, .md, or a fresh .docx.</p>
+      </div>
+      <div class="format-cell">
+        <span class="fstamp">.DOCX</span>
+        <p>Reads a Word document's content and structure, and outputs .txt, .md, .html, or .pdf.</p>
+      </div>
+      <div class="format-cell">
+        <span class="fstamp">.MD</span>
+        <p>Renders Markdown into .html or .pdf, or flattens it down to .txt / .docx.</p>
+      </div>
+      <div class="format-cell">
+        <span class="fstamp">.HTML</span>
+        <p>Converts marked-up pages into .md, .txt, .pdf, or .docx.</p>
+      </div>
+      <div class="format-cell">
+        <span class="fstamp">.TXT</span>
+        <p>Wraps plain text into a formatted .pdf, .docx, .md, or .html document.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  Retype · a private, browser-only document converter
+</footer>
+
+<!-- Conversion libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/turndown/7.1.2/turndown.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.js"></script>
+
+<script>
+(function(){
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  }
+
+  const targetSelect = document.getElementById('targetSelect');
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const pipeline = document.getElementById('pipeline');
+  const filenameLabel = document.getElementById('filenameLabel');
+  const inputStamp = document.getElementById('inputStamp');
+  const toSelect = document.getElementById('toSelect');
+  const convertBtn = document.getElementById('convertBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const statusEl = document.getElementById('status');
+  const downloadLink = document.getElementById('downloadLink');
+
+  const OUTPUT_MAP = {
+    pdf:  ['txt','md','docx'],
+    docx: ['txt','md','html','pdf'],
+    txt:  ['pdf','docx','md','html'],
+    md:   ['html','pdf','docx','txt'],
+    html: ['md','txt','pdf','docx']
+  };
+
+  const LABELS = {
+    pdf:'.PDF', docx:'.DOCX', txt:'.TXT', md:'.MD', html:'.HTML'
+  };
+
+  let currentFile = null;
+  let currentExt = null;
+
+  function extOf(name){
+    const parts = name.split('.');
+    return parts.length > 1 ? parts.pop().toLowerCase() : '';
+  }
+
+  function canonicalOf(ext){
+    if (ext === 'markdown') return 'md';
+    if (ext === 'htm') return 'html';
+    return ext;
+  }
+
+  function baseNameOf(name){
+    const idx = name.lastIndexOf('.');
+    return idx > -1 ? name.slice(0, idx) : name;
+  }
+
+  function setStatus(msg, kind){
+    statusEl.textContent = msg || '';
+    statusEl.className = kind ? kind : '';
+  }
+
+  function populateToSelect(fromExt){
+    const opts = OUTPUT_MAP[fromExt];
+    toSelect.innerHTML = '';
+    opts.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o;
+      opt.textContent = 'as ' + LABELS[o];
+      toSelect.appendChild(opt);
+    });
+  }
+
+  function resetAll(){
+    currentFile = null;
+    currentExt = null;
+    fileInput.value = '';
+    pipeline.hidden = true;
+    dropzone.hidden = false;
+    downloadLink.hidden = true;
+    if (downloadLink.href) { URL.revokeObjectURL(downloadLink.href); downloadLink.removeAttribute('href'); }
+    setStatus('', '');
+  }
+
+  function handleFile(file){
+    const rawExt = extOf(file.name);
+    const canon = canonicalOf(rawExt);
+    if (!OUTPUT_MAP[canon]){
+      setStatus('Unsupported file type: .' + (rawExt || '?'), 'error');
+      return;
+    }
+    currentFile = file;
+    currentExt = canon;
+
+    filenameLabel.textContent = file.name;
+    inputStamp.textContent = LABELS[canon];
+    populateToSelect(canon);
+
+    // honor the format chosen up front, if it's a valid target for this input
+    if (OUTPUT_MAP[canon].includes(targetSelect.value)) {
+      toSelect.value = targetSelect.value;
+    } else {
+      targetSelect.value = toSelect.value;
+    }
+
+    dropzone.hidden = true;
+    pipeline.hidden = false;
+    downloadLink.hidden = true;
+    setStatus('', '');
+  }
+
+  targetSelect.addEventListener('change', () => {
+    if (currentExt && OUTPUT_MAP[currentExt].includes(targetSelect.value)) {
+      toSelect.value = targetSelect.value;
+    }
+  });
+  toSelect.addEventListener('change', () => {
+    targetSelect.value = toSelect.value;
+  });
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+  });
+  dropzone.tabIndex = 0;
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files && fileInput.files[0]) handleFile(fileInput.files[0]);
+  });
+
+  ['dragenter','dragover'].forEach(evt => {
+    dropzone.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.add('drag');
+    });
+  });
+  ['dragleave','drop'].forEach(evt => {
+    dropzone.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.remove('drag');
+    });
+  });
+  dropzone.addEventListener('drop', (e) => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  resetBtn.addEventListener('click', resetAll);
+
+  // ---------- intermediate extraction ----------
+
+  async function extractPdf(file){
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map(it => it.str);
+      text += strings.join(' ') + '\n\n';
+    }
+    return { text: text.trim(), html: null };
+  }
+
+  async function extractDocx(file){
+    const buf = await file.arrayBuffer();
+    const htmlResult = await mammoth.convertToHtml({ arrayBuffer: buf });
+    const textResult = await mammoth.extractRawText({ arrayBuffer: buf });
+    return { text: textResult.value.trim(), html: htmlResult.value };
+  }
+
+  async function extractTxt(file){
+    const text = await file.text();
+    return { text, html: null };
+  }
+
+  async function extractMd(file){
+    const text = await file.text();
+    const html = marked.parse(text);
+    return { text, html };
+  }
+
+  async function extractHtml(file){
+    const html = await file.text();
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    const text = div.textContent || '';
+    return { text: text.trim(), html };
+  }
+
+  async function getIntermediate(file, ext){
+    if (ext === 'pdf') return extractPdf(file);
+    if (ext === 'docx') return extractDocx(file);
+    if (ext === 'txt') return extractTxt(file);
+    if (ext === 'md') return extractMd(file);
+    if (ext === 'html') return extractHtml(file);
+    throw new Error('Unsupported input format');
+  }
+
+  // ---------- output rendering ----------
+
+  function download(blob, filename){
+    const url = URL.createObjectURL(blob);
+    downloadLink.href = url;
+    downloadLink.download = filename;
+    downloadLink.textContent = 'Download ' + filename;
+    downloadLink.hidden = false;
+  }
+
+  function toTxt(inter, baseName){
+    let text = inter.text;
+    if (!text && inter.html){
+      const div = document.createElement('div');
+      div.innerHTML = inter.html;
+      text = div.textContent || '';
+    }
+    download(new Blob([text], { type: 'text/plain' }), baseName + '.txt');
+  }
+
+  function toMd(inter, baseName){
+    let md;
+    if (inter.html){
+      const td = new TurndownService();
+      md = td.turndown(inter.html);
+    } else {
+      md = inter.text;
+    }
+    download(new Blob([md], { type: 'text/markdown' }), baseName + '.md');
+  }
+
+  function toHtml(inter, baseName){
+    let bodyHtml = inter.html;
+    if (!bodyHtml){
+      const escaped = (inter.text || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      bodyHtml = escaped.split(/\n{2,}/).map(p => '<p>' + p.replace(/\n/g,'<br>') + '</p>').join('\n');
+    }
+    const doc = '<!doctype html>\n<html><head><meta charset="utf-8"><title>' + baseName +
+      '</title><style>body{font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 20px;line-height:1.6;color:#1b1d2a;}</style></head><body>\n' +
+      bodyHtml + '\n</body></html>';
+    download(new Blob([doc], { type: 'text/html' }), baseName + '.html');
+  }
+
+  function toPdf(inter, baseName){
+    let text = inter.text;
+    if (!text && inter.html){
+      const div = document.createElement('div');
+      div.innerHTML = inter.html;
+      text = div.textContent || '';
+    }
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4' });
+    const margin = 48;
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const maxWidth = pageWidth - margin * 2;
+    pdf.setFont('times', 'normal');
+    pdf.setFontSize(11);
+
+    const paragraphs = (text || '').split(/\n{2,}/);
+    let y = margin;
+    const lineHeight = 15;
+
+    paragraphs.forEach((para, pi) => {
+      const lines = pdf.splitTextToSize(para.replace(/\n/g, ' '), maxWidth);
+      lines.forEach(line => {
+        if (y > pageHeight - margin){
+          pdf.addPage();
+          y = margin;
+        }
+        pdf.text(line, margin, y);
+        y += lineHeight;
+      });
+      y += lineHeight * 0.6;
+    });
+
+    pdf.save(baseName + '.pdf');
+  }
+
+  async function toDocx(inter, baseName){
+    const { Document, Packer, Paragraph, HeadingLevel } = window.docx;
+    let paragraphs = [];
+
+    if (inter.text && /(^|\n)#{1,6}\s/.test(inter.text)){
+      // looks like markdown-ish text with headings
+      inter.text.split('\n').forEach(line => {
+        const m = line.match(/^(#{1,6})\s+(.*)$/);
+        if (m){
+          const level = Math.min(m[1].length, 6);
+          const headingMap = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6];
+          paragraphs.push(new Paragraph({ text: m[2], heading: headingMap[level-1] }));
+        } else if (line.trim() === ''){
+          paragraphs.push(new Paragraph({ text: '' }));
+        } else {
+          paragraphs.push(new Paragraph({ text: line }));
+        }
+      });
+    } else {
+      const text = inter.text || (inter.html ? (function(){ const d=document.createElement('div'); d.innerHTML=inter.html; return d.textContent; })() : '');
+      text.split(/\n{2,}/).forEach(para => {
+        paragraphs.push(new Paragraph({ text: para.replace(/\n/g,' ') }));
+        paragraphs.push(new Paragraph({ text: '' }));
+      });
+    }
+
+    if (paragraphs.length === 0) paragraphs.push(new Paragraph({ text: '' }));
+
+    const doc = new Document({ sections: [{ children: paragraphs }] });
+    const blob = await Packer.toBlob(doc);
+    download(blob, baseName + '.docx');
+  }
+
+  function renderOutput(inter, outExt, baseName){
+    if (outExt === 'txt') return toTxt(inter, baseName);
+    if (outExt === 'md') return toMd(inter, baseName);
+    if (outExt === 'html') return toHtml(inter, baseName);
+    if (outExt === 'pdf') return toPdf(inter, baseName);
+    if (outExt === 'docx') return toDocx(inter, baseName);
+    throw new Error('Unsupported output format');
+  }
+
+  convertBtn.addEventListener('click', async () => {
+    if (!currentFile) return;
+    convertBtn.disabled = true;
+    downloadLink.hidden = true;
+    setStatus('Retyping your document…', '');
+
+    try {
+      const inter = await getIntermediate(currentFile, currentExt);
+      const outExt = toSelect.value;
+      const baseName = baseNameOf(currentFile.name);
+      await renderOutput(inter, outExt, baseName);
+      setStatus('Done — your file is ready.', 'ok');
+    } catch (err) {
+      console.error(err);
+      setStatus('Something went wrong converting this file: ' + (err && err.message ? err.message : err), 'error');
+    } finally {
+      convertBtn.disabled = false;
+    }
+  });
+
+})();
+</script>
+
+</body>
+</html>
+google-site-verification: googleacd6f68638d817bf.html
